@@ -19,3 +19,5 @@ const cloudinaryUpload = async (localFilePath) => {
     fs.unlinkSync(localFilePath);
   }
 };
+
+export default cloudinaryUpload;
