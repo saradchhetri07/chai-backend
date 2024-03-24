@@ -7,7 +7,6 @@ import { ApiResonse } from "../utils/Apiresponse.js";
 import { response } from "express";
 
 const registerUser = asyncHandler(async (req, res) => {
-  console.log("came here");
   //get details from user
   // set up validation logic - not empty
   // check if user already exists: username,email
@@ -26,35 +25,44 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(400, "All fields are required");
   }
 
-  const existedUser = User.findOne({ $or: [{ email }, { userName }] });
+  const existedUser = await User.findOne({ $or: [{ email }, { userName }] });
 
   if (existedUser) {
     throw new ApiError(409, "User or email already exists");
   }
+
   const avatarLocalFilePath = req.files?.avatar[0]?.path;
-  const coverImageLocalFilePath = req.files?.coverImage[0]?.path;
+  let coverImageLocalFilePath = "";
+  if (req.files.coverImage) {
+    let coverImageLocalFilePath = req.files?.coverImage[0]?.path;
+  }
 
   if (!avatarLocalFilePath) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Avatar local file is required");
   }
 
   const avatar = await cloudinaryUpload(avatarLocalFilePath);
-  const coverImage = await cloudinaryUpload(coverImageLocalFilePath);
+  const coverImageUrl = await cloudinaryUpload(coverImageLocalFilePath);
+
+  console.log(avatar);
+  console.log(coverImageUrl);
 
   if (!avatar) {
-    throw new ApiError(400, "Avatar file is required");
+    throw new ApiError(400, "Avatar file not uploaded");
   }
 
   const user = await User.create({
     fullName,
-    avatar: Avatar.url,
-    coverImage: coverImage?.url || "",
+    avatar: avatar.url,
+    coverImage: coverImageUrl?.url || "",
     email,
     password,
     userName: userName.toLowerCase(),
   });
 
-  const createdUser = User.findById(user._id).select("-password -refreshToken");
+  const createdUser = await User.findById(user._id).select(
+    "-password -refreshToken"
+  );
 
   if (!createdUser) {
     throw new ApiError(500, "Something went wrong while registering user");

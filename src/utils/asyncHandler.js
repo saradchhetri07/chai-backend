@@ -8,13 +8,19 @@
 //     });
 //   }
 // });
-const asyncHandler = (fnc = async (req, res, next) => {}) => {
-  return async (req, res, next) => {
-    try {
-      await fnc(req, res, next);
-    } catch (error) {
-      next(error); // Pass the error to the error handling middleware
-    }
+// const asyncHandler = (fnc = async (req, res, next) => {}) => {
+//   return async (req, res, next) => {
+//     try {
+//       await fnc(req, res, next);
+//     } catch (error) {
+//       console.log("async handler error");
+//       next(error); // Pass the error to the error handling middleware
+//     }
+//   };
+// };
+const asyncHandler = (requestHandler) => {
+  return (req, res, next) => {
+    Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
   };
 };
 
