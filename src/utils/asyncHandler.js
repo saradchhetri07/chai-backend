@@ -24,6 +24,8 @@ const asyncHandler = (requestHandler) => {
   };
 };
 
+export { asyncHandler };
+
 // const asyncHandler = (requestHandler) => {
 //   (req, res, next) => {
 //     // return Promise.resolve(requestHandler(req, res, next)).catch((err) =>
@@ -31,5 +33,3 @@ const asyncHandler = (requestHandler) => {
 //     );
 //   };
 // };
-
-export { asyncHandler };
