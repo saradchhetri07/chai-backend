@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.models.js";
-import cloudinaryUpload from "../utils/cloudinary.js";
+import { cloudinaryUpload, cloudinaryDelete } from "../utils/cloudinary.js";
 import { ApiResonse } from "../utils/Apiresponse.js";
 import { response } from "express";
 
@@ -237,7 +237,9 @@ const changeCurrentPassword = asyncHandler(async (req, res) => {
   user.password = newPassword;
   await user.save({ validateBeforeSave: false });
 
-  return res.status(200).json(200, {}, "Password changed sucessfully");
+  return res
+    .status(200)
+    .json(new ApiResonse(200, {}, "Password changed sucessfully"));
 });
 
 const getCurrentUser = asyncHandler(async (req, res) => {
@@ -270,18 +272,26 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 });
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
-  const avatarLocalFilePath = req.file?.path;
+  try {
+    const avatarLocalFilePath = req.files.avatar[0]?.path;
 
-  if (!avatarLocalFilePath) {
-    throw new ApiError(400, "select files");
-  }
-  const avatar = await cloudinaryUpload(avatarLocalFilePath);
+    if (!avatarLocalFilePath) {
+      throw new ApiError(400, "select files");
+    }
 
-  if (!avatar.url) {
-    throw new ApiError(400, "files not uploaded");
-  }
-  const user = await user
-    .findByIdAndUpdate(
+    //upload the image
+    const avatar = await cloudinaryUpload(avatarLocalFilePath);
+
+    console.log("user avatar" + req.user.avatar);
+
+    // //delete the image
+    const deleteFromCloudinary = await cloudinaryDelete(req.user?.avatar);
+
+    if (!avatar.url) {
+      throw new ApiError(400, "files not uploaded");
+    }
+
+    const user = await User.findByIdAndUpdate(
       req.user?._id,
       {
         $set: {
@@ -291,12 +301,14 @@ const updateUserAvatar = asyncHandler(async (req, res) => {
       {
         new: true,
       }
-    )
-    .select("-password");
+    ).select("-password");
 
-  return res
-    .status(200)
-    .json(new ApiResonse(200, user, "user avatar updated sucessfully"));
+    return res
+      .status(200)
+      .json(new ApiResonse(200, user, "user avatar updated sucessfully"));
+  } catch (error) {
+    throw new ApiError(400, "cannot update avatar image");
+  }
 });
 
 const updateUserCoverImage = asyncHandler(async (req, res) => {
@@ -306,6 +318,8 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     throw new ApiError(400, "cover Image file is missing");
   }
   const coverImage = await cloudinaryUpload(coverImageLocalFilePath);
+
+  const deleteFromCloudinary = await cloudinaryDelete(req.user?.coverImage);
 
   if (!coverImage.url) {
     throw new ApiError(400, "coverImage not uploaded");
@@ -329,6 +343,75 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
     .json(new ApiResonse(200, user, "coverImage updated sucessfully"));
 });
 
+const getChannelProfileDetails = asyncHandler(async (req, res) => {
+  const { userName } = req.params;
+
+  if (!userName) {
+    throw new ApiError(400, "Username is required");
+  }
+
+  const channel = await User.aggregate([
+    {
+      $match: {
+        userName: userName?.toLowerCase(),
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "channel",
+        as: "subscribers",
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        localField: "_id",
+        foreignField: "subscriber",
+        as: "channelSubscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: {
+          $size: "$subscribers",
+        },
+        chanelSubscritedToCount: {
+          $size: "$channelSubscribedTo",
+        },
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "subscribers.subscriber"] },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        fullName: 1,
+        userName: 1,
+        subscribersCount: 1,
+        chanelSubscritedToCount: 1,
+        isSubscribed: 1,
+        avatar: 1,
+        coverImage: 1,
+        email: 1,
+      },
+    },
+  ]);
+
+  console.log(channel);
+
+  if (!channel?.length) {
+    throw new ApiError(404, "Channel doesnt exist");
+  }
+  return res
+    .status(200)
+    .json(new ApiResonse(200, channel, "Channel fetched sucessfully"));
+});
 export {
   registerUser,
   loginUser,
@@ -339,4 +422,5 @@ export {
   updateUserDetails,
   updateUserAvatar,
   updateUserCoverImage,
+  getChannelProfileDetails,
 };

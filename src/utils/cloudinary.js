@@ -1,5 +1,6 @@
 import { v2 as cloudinary } from "cloudinary";
 import fs from "fs";
+import { ApiError } from "./ApiError.js";
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -22,4 +23,35 @@ const cloudinaryUpload = async (localFilePath) => {
   }
 };
 
-export default cloudinaryUpload;
+const getPublicId = (publicUrl) => {
+  const lastIndex = publicUrl.lastIndexOf("/");
+
+  // If '/' is found, extract the substring after it
+  let substring = publicUrl.substring(lastIndex + 1); // or url.slice(lastIndex + 1);
+
+  // Find the index of the last occurrence of '.' in the substring
+  const extensionIndex = substring.lastIndexOf(".");
+
+  // If '.' is found, remove the extension
+  if (extensionIndex !== -1) {
+    substring = substring.substring(0, extensionIndex); // or substring.slice(0, extensionIndex);
+  }
+  return substring;
+};
+
+const cloudinaryDelete = async (publicUrl) => {
+  try {
+    const publicId = getPublicId(publicUrl);
+    console.log(publicId);
+    //upload to cloudinary
+    const response = await cloudinary.uploader.destroy(publicId, {
+      resource_type: "image",
+    });
+
+    return response;
+  } catch (error) {
+    throw new ApiError(500, error.message || "unable to delete from server");
+  }
+};
+
+export { cloudinaryUpload, cloudinaryDelete };
