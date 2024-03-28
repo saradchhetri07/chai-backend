@@ -1,4 +1,4 @@
-import mongoose from "mongoose";
+import mongoose, { Mongoose } from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { User } from "../models/users.models.js";
@@ -273,7 +273,7 @@ const updateUserDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatar = asyncHandler(async (req, res) => {
   try {
-    const avatarLocalFilePath = req.files.avatar[0]?.path;
+    const avatarLocalFilePath = req.file?.path;
 
     if (!avatarLocalFilePath) {
       throw new ApiError(400, "select files");
@@ -410,8 +410,61 @@ const getChannelProfileDetails = asyncHandler(async (req, res) => {
   }
   return res
     .status(200)
-    .json(new ApiResonse(200, channel, "Channel fetched sucessfully"));
+    .json(new ApiResonse(200, channel[0], "Channel fetched sucessfully"));
 });
+
+const getWatchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    {
+      $match: new mongoose.Types.ObjectId(req.user?._id),
+    },
+    {
+      $lookup: {
+        from: "videos",
+        localField: "watchHistory",
+        foreignField: "_id",
+        as: "watchHistory",
+        pipeline: [
+          {
+            $lookup: {
+              from: "videos",
+              localField: "owner",
+              foreignField: "_id",
+              as: "owner",
+              pipeline: [
+                {
+                  $project: {
+                    fullName: 1,
+                    userName: 1,
+                    avatar: 1,
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+    {
+      $addFields: {
+        owner: {
+          $first: "$owner",
+        },
+      },
+    },
+  ]);
+
+  return res
+    .status(200)
+    .json(
+      new ApiResonse(
+        200,
+        user[0].watchHistory,
+        "watchHistory fetched sucessfully"
+      )
+    );
+});
+
 export {
   registerUser,
   loginUser,
@@ -423,4 +476,5 @@ export {
   updateUserAvatar,
   updateUserCoverImage,
   getChannelProfileDetails,
+  getWatchHistory,
 };
