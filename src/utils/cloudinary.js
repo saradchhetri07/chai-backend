@@ -23,6 +23,21 @@ const cloudinaryUpload = async (localFilePath) => {
   }
 };
 
+// const cloudinaryVideoUpload = async (localFilePath) => {
+//   try {
+//     if (!localFilePath || localFilePath.length === 0) return null;
+//     //upload to cloudinary
+//     const response = await cloudinary.uploader.upload_large(localFilePath, {
+//       resource_type: "video",
+//     });
+//     console.log("file been uploaded to cloudinary" + response.url);
+//     fs.unlinkSync(localFilePath);
+//     return response;
+//   } catch (error) {
+//     fs.unlinkSync(localFilePath);
+//   }
+// };
+
 const getPublicId = (publicUrl) => {
   const lastIndex = publicUrl.lastIndexOf("/");
 

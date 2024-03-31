@@ -5,7 +5,7 @@ const videoSchema = new Schema(
   {
     videoFile: {
       type: String,
-      required: true, //cloudinery
+      required: true, //cloudinary
     },
     thumbnail: {
       type: String,
@@ -29,7 +29,7 @@ const videoSchema = new Schema(
     },
     isPublished: {
       type: Boolean,
-      default: true,
+      default: false,
     },
     owner: {
       type: Schema.Types.ObjectId,
@@ -41,6 +41,20 @@ const videoSchema = new Schema(
   }
 );
 
+videoSchema.pre("save", function (next) {
+  // Check if the document is being modified or is new
+  if (!this.isModified("isPublished") && !this.isNew) {
+    // If isPublished is not being modified and it's not a new document, proceed with the save operation
+    return next();
+  }
+
+  // Set isPublished to true
+  this.isPublished = true;
+
+  // Continue with the save operation
+  next();
+});
+
 videoSchema.plugin(mongooseAggregatePaginate);
 
-export const Video = Schema.model("Video", videoSchema);
+export const Video = mongoose.model("Video", videoSchema);

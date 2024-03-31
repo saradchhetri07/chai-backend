@@ -1,7 +1,7 @@
 import mongoose, { Mongoose } from "mongoose";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { User } from "../models/users.models.js";
+import { User } from "../models/user.models.js";
 import { cloudinaryUpload, cloudinaryDelete } from "../utils/cloudinary.js";
 import { ApiResonse } from "../utils/Apiresponse.js";
 import { response } from "express";
@@ -403,7 +403,6 @@ const getChannelProfileDetails = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log(channel);
 
   if (!channel?.length) {
     throw new ApiError(404, "Channel doesnt exist");
